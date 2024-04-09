@@ -1,4 +1,5 @@
 using XLinkedList = XORLinkedList.LinkedList<int>;
+using Node = XORLinkedList.LinkedList<int>.Node<int>;
 
 namespace XORLinkedListTests
 {
@@ -6,79 +7,114 @@ namespace XORLinkedListTests
     public class LinkedListTests
     {
         [TestMethod]
-        public unsafe void AddSingleNode()
+        public unsafe void AddAtHead_AddsToEmptyList_HeadAndTailPointToSameNode()
         {
-            // Arrange
-            int value = 5;
-            XLinkedList linkedList = new XLinkedList();
+            XLinkedList list = new XLinkedList();
 
-            // Act
-            linkedList.Add(value);
-            var head = linkedList.head;
+            list.AddAtHead(5);
 
-            // Assert
-            Assert.IsTrue(head != null);
-            Assert.AreEqual(value, head->Value);
-            Assert.IsTrue(null == head->Link);
+            Assert.IsNotNull((IntPtr)list.head);
+            Assert.AreEqual((IntPtr)list.head, (IntPtr)list.tail);
+            Assert.AreEqual(5, list.head->Value);
         }
 
         [TestMethod]
-        public unsafe void TraverseLinkedList()
+        public unsafe void AddAtTail_AddsToEmptyList_HeadAndTailPointToSameNode()
         {
-            // Arrange
-            XLinkedList linkedList = new XLinkedList();
-            linkedList.Add(5);
-            linkedList.Add(10);
-            linkedList.Add(15);
+            XLinkedList list = new XLinkedList();
 
-            // Act
-            string result = linkedList.Traverse();
+            list.AddAtTail(5);
 
-            // Assert
-            Assert.AreEqual("15\n10\n5\nnullptr", result);
+            Assert.IsNotNull((IntPtr)list.head);
+            Assert.AreEqual((IntPtr)list.head, (IntPtr)list.tail);
+            Assert.AreEqual(5, list.head->Value);
         }
 
         [TestMethod]
-        public unsafe void DeleteSingleNode()
+        public unsafe void AddAtHead_AddsMultipleNodes_HeadPointsToNewNode()
         {
-            // Arrange
-            XLinkedList linkedList = new XLinkedList();
-            linkedList.Add(5);
+            XLinkedList list = new XLinkedList();
 
-            // Act
-            linkedList.Delete();
+            list.AddAtHead(5);
+            list.AddAtHead(10);
+            list.AddAtHead(15);
 
-            // Assert
-            Assert.IsTrue(linkedList.head == null);
+            Node* head = list.head;
+            Node* next = head->Next(null);
+            Node* nextNext = next->Next(head);
+
+            Assert.AreEqual(15, head->Value);
+            Assert.AreEqual(10, next->Value);
+            Assert.AreEqual(5, nextNext->Value);
         }
 
         [TestMethod]
-        public unsafe void DeleteFromEmptyList()
+        public unsafe void AddAtTail_AddsMultipleNodes_TailPointsToNewNode()
         {
-            // Arrange
-            XLinkedList linkedList = new XLinkedList();
+            XLinkedList list = new XLinkedList();
 
-            // Act
-            linkedList.Delete();
+            list.AddAtTail(5);
+            list.AddAtTail(10);
+            list.AddAtTail(15);
 
-            // Assert
-            Assert.IsTrue(linkedList.head == null);
+            Node* tail = list.tail;
+            Node* next = tail->Previous(null);
+            Node* nextNext = next->Previous(tail);
+
+            Assert.AreEqual(15, tail->Value);
+            Assert.AreEqual(10, next->Value);
+            Assert.AreEqual(5, nextNext->Value);
         }
 
         [TestMethod]
-        public unsafe void DeleteFromMultipleNodeList()
+        public unsafe void DeleteFromHead_RemovesNode_HeadAndTailAreNull()
         {
-            // Arrange
-            XLinkedList linkedList = new XLinkedList();
-            linkedList.Add(5);
-            linkedList.Add(10);
-            linkedList.Add(15);
+            XLinkedList list = new XLinkedList();
 
-            // Act
-            linkedList.Delete();
+            list.AddAtTail(5);
+            list.DeleteFromHead();
 
-            // Assert
-            Assert.AreEqual("10\n5\nnullptr", linkedList.Traverse());
+            Assert.AreEqual(IntPtr.Zero, (IntPtr)list.head);
+            Assert.AreEqual(IntPtr.Zero, (IntPtr)list.tail);
+        }
+
+        [TestMethod]
+        public unsafe void DeleteFromTail_RemovesNode_HeadAndTailAreNull()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddAtTail(5);
+            list.DeleteFromTail();
+
+            Assert.AreEqual(IntPtr.Zero, (IntPtr)list.head);
+            Assert.AreEqual(IntPtr.Zero, (IntPtr)list.tail);
+        }
+
+        [TestMethod]
+        public unsafe void DeleteFromHead_RemovesNode_HeadPointsToNextNode()
+        {
+            XLinkedList list = new XLinkedList();
+
+
+            list.AddAtHead(5);
+            list.AddAtHead(10);
+            list.DeleteFromHead();
+
+            Assert.AreEqual(5, list.head->Value);
+            Assert.AreEqual(5, list.tail->Value);
+        }
+
+        [TestMethod]
+        public unsafe void DeleteFromTail_RemovesNode_TailPointsToPreviousNode()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddAtTail(5);
+            list.AddAtTail(10);
+            list.DeleteFromTail();
+
+            Assert.AreEqual(5, list.tail->Value);
+            Assert.AreEqual(5, list.head->Value);
         }
     }
 }

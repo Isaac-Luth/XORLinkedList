@@ -7,89 +7,123 @@ namespace XORLinkedList
         public unsafe struct Node<T>
         {
             public T Value;
-            public Node<T>* Link;
+            internal Node<T>* Link;
+
+            public unsafe Node<T>* Next(Node<T>* prev)
+            {
+                return XOR(Link, prev);
+            }
+
+            public unsafe Node<T>* Previous(Node<T>* next)
+            {
+                return XOR(Link, next);
+            }
 
             public Node(T value)
             {
                 Value = value;
                 Link = null;
             }
+
+            public unsafe Node<T>* XOR(Node<T>* x, Node<T>* y)
+            {
+                return (Node<T>*)((UIntPtr)(x) ^ (UIntPtr)(y));
+            }
         }
 
         public unsafe Node<T>* head { get; private set; }
+        public unsafe Node<T>* tail { get; private set; }
 
         public unsafe LinkedList()
         {
             this.head = null;
+            this.tail = null;
         }
 
-        private unsafe Node<T>* XOR(Node<T>* x, Node<T>* y)
-        {
-            return (Node<T>*)((UIntPtr)(x) ^ (UIntPtr)(y));
-        }
-
-        public unsafe string Traverse()
-        {
-            Node<T>* curr = head;
-            Node<T>* prev = null;
-            Node<T>* next;
-
-            string result = "";
-
-            while (curr != null)
-            {
-                result += curr->Value + "\n";
-
-                next = XOR(prev, curr->Link);
-
-
-                prev = curr;
-                curr = next;
-            }
-            
-            result += "nullptr";
-
-            return result;
-        }
-
-        public unsafe void Add(T value)
+        public unsafe void AddAtHead(T data)
         {
             Node<T>* newNode = (Node<T>*)Marshal.AllocHGlobal(sizeof(Node<T>));
-            *newNode = new Node<T>(value);
+            newNode->Value = data;
 
-            newNode->Link = XOR(head, null);
+            newNode->Link = XOR(null, head);
 
             if (head != null)
             {
                 head->Link = XOR(newNode, XOR(head->Link, null));
             }
+            else
+            {
+                tail = newNode;
+            }
 
             head = newNode;
         }
 
-        public unsafe void Delete()
+        public unsafe void AddAtTail(T data)
+        {
+            Node<T>* newNode = (Node<T>*)Marshal.AllocHGlobal(sizeof(Node<T>));
+            newNode->Value = data;
+
+            newNode->Link = XOR(tail, null);
+
+            if (tail != null)
+            {
+                tail->Link = XOR(XOR(tail->Link, null), newNode);
+            }
+            else
+            {
+                head = newNode;
+            }
+
+            tail = newNode;
+        }
+
+        public unsafe void DeleteFromHead()
         {
             if (head == null)
             {
                 return;
             }
 
-            Node<T>* next = head->Link;
-
-            if (next == null)
-            {
-                Marshal.FreeHGlobal((IntPtr)head);
-                head = null;
-                return;
-            }
-            
-            
-            Node<T>* nextNext = XOR(head, next->Link);
-            next->Link = XOR(null, nextNext);
-
+            Node<T>* next = XOR(head->Link, null);
             Marshal.FreeHGlobal((IntPtr)head);
             head = next;
+
+
+            if (head != null)
+            {
+                next->Link = XOR(next->Link, head);
+            }
+            else
+            {
+                tail = null;
+            }
         }
 
+        public unsafe void DeleteFromTail()
+        {
+            if (tail == null)
+            {
+                return;
+            }
+
+            Node<T>* prev = XOR(tail->Link, null);
+            Marshal.FreeHGlobal((IntPtr)tail);
+            tail = prev;
+
+            if (tail != null)
+            {
+                prev->Link = XOR(prev->Link, tail);
+            }
+            else
+            {
+                head = null;
+            }
+        }
+
+        private unsafe Node<T>* XOR(Node<T>* x, Node<T>* y)
+        {
+            return (Node<T>*)((UIntPtr)(x) ^ (UIntPtr)(y));
+        }
     }
 }
