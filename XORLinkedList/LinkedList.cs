@@ -25,7 +25,7 @@ namespace XORLinkedList
                 Link = null;
             }
 
-            public unsafe Node<T>* XOR(Node<T>* x, Node<T>* y)
+            private unsafe Node<T>* XOR(Node<T>* x, Node<T>* y)
             {
                 return (Node<T>*)((UIntPtr)(x) ^ (UIntPtr)(y));
             }
