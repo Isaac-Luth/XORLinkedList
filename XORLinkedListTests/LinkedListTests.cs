@@ -91,19 +91,6 @@ namespace XORLinkedListTests
         }
 
         [TestMethod]
-        public unsafe void AddAfter_AddsNode_HeadAndTailNotChanged()
-        {
-            XLinkedList list = new XLinkedList();
-
-            list.AddFirst(5);
-            list.AddFirst(10);
-            list.AddAfter(list.first, 15);
-
-            Assert.AreEqual(10, list.first->Value);
-            Assert.AreEqual(5, list.last->Value);
-        }
-
-        [TestMethod]
         public unsafe void DeleteFromHead_RemovesNode_HeadPointsToNextNode()
         {
             XLinkedList list = new XLinkedList();
@@ -144,29 +131,31 @@ namespace XORLinkedListTests
         }
 
         [TestMethod]
-        public unsafe void Contains_ReturnsTrueIfItemExists()
+        public void Contains_ReturnsTrueIfItemExists()
         {
             XLinkedList list = new XLinkedList();
 
             list.AddFirst(5);
             list.AddFirst(10);
+            list.AddFirst(15);
 
             Assert.IsTrue(list.Contains(5));
         }
 
         [TestMethod]
-        public unsafe void Contains_ReturnsFalseIfItemDoesNotExist()
+        public void Contains_ReturnsFalseIfItemDoesNotExist()
         {
             XLinkedList list = new XLinkedList();
 
             list.AddFirst(5);
             list.AddFirst(10);
+            list.AddFirst(15);
 
-            Assert.IsFalse(list.Contains(15));
+            Assert.IsFalse(list.Contains(20));
         }
 
         [TestMethod]
-        public unsafe void Count_ReturnsNumberOfNodes()
+        public void Count_ReturnsNumberOfNodes()
         {
             XLinkedList list = new XLinkedList();
 
@@ -177,7 +166,7 @@ namespace XORLinkedListTests
         }
 
         [TestMethod]
-        public unsafe void GetEnumerator_ReturnsEnumerator()
+        public void GetEnumerator_ReturnsEnumerator()
         {
             XLinkedList list = new XLinkedList();
 
@@ -190,7 +179,7 @@ namespace XORLinkedListTests
         }
 
         [TestMethod]
-        public unsafe void GetEnumerator_ReturnsEnumeratorWithCorrectValues()
+        public void GetEnumerator_ReturnsEnumeratorWithCorrectValues()
         {
             XLinkedList list = new XLinkedList();
 
@@ -207,7 +196,7 @@ namespace XORLinkedListTests
         }
 
         [TestMethod]
-        public unsafe void GetEnumerator_ReturnsEnumeratorWithCorrectValuesAfterReset()
+        public void GetEnumerator_ReturnsEnumeratorWithCorrectValuesAfterReset()
         {
             XLinkedList list = new XLinkedList();
 
@@ -225,7 +214,7 @@ namespace XORLinkedListTests
         }
 
         [TestMethod]
-        public unsafe void GetEnumerator_ForEach()
+        public void GetEnumerator_ForEach()
         {
             XLinkedList list = new XLinkedList();
 
@@ -242,7 +231,7 @@ namespace XORLinkedListTests
         }
 
         [TestMethod]
-        public unsafe void GetEnumerator_Empty()
+        public void GetEnumerator_Empty()
         {
             XLinkedList list = new XLinkedList();
 
@@ -253,6 +242,184 @@ namespace XORLinkedListTests
             Assert.ThrowsException<InvalidOperationException>(() => enumerator.Current);
         }
 
+        [TestMethod]
+        public void GetEnumerator_EmptyAfterReset()
+        {
+            XLinkedList list = new XLinkedList();
+
+            IEnumerator<int> enumerator = list.GetEnumerator();
+
+            enumerator.Reset();
+
+            Assert.IsFalse(enumerator.MoveNext());
+
+            Assert.ThrowsException<InvalidOperationException>(() => enumerator.Current);
+        }
+
+        [TestMethod]
+        public unsafe void Remove_RemovesNode()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+
+            list.Remove(5);
+
+            Assert.AreEqual(10, list.first->Value);
+            Assert.AreEqual(10, list.last->Value);
+        }
+
+        [TestMethod]
+        public unsafe void Remove_RemovesNodeFromMiddle()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddFirst(15);
+
+            list.Remove(10);
+
+            Assert.AreEqual(15, list.first->Value);
+            Assert.AreEqual(5, list.last->Value);
+        }
+
+        [TestMethod]
+        public unsafe void Remove_RemovesNodeFromEnd()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddFirst(15);
+
+            list.Remove(5);
+
+            Assert.AreEqual(15, list.first->Value);
+            Assert.AreEqual(10, list.last->Value);
+        }
+
+        [TestMethod]
+        public unsafe void Remove_RemovesFail()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddFirst(15);
+
+            list.Remove(20);
+
+            Assert.AreEqual(15, list.first->Value);
+            Assert.AreEqual(5, list.last->Value);
+        }
+
+        [TestMethod]
+        public unsafe void Remove_RemovesNodeUsingNode()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddFirst(15);
+
+            list.Remove(list.first->Next(null));
+
+            Assert.AreEqual(15, list.first->Value);
+            Assert.AreEqual(5, list.last->Value);
+        }
+
+        [TestMethod]
+        public void CopyTo_CopiesValuesToArray()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddFirst(15);
+
+            int[] array = new int[3];
+            list.CopyTo(array, 0);
+
+            Assert.AreEqual(15, array[0]);
+            Assert.AreEqual(10, array[1]);
+            Assert.AreEqual(5, array[2]);
+        }
+
+        [TestMethod]
+        public void CopyTo_CopiesValuesToArrayWithOffset()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddFirst(15);
+
+            int[] array = new int[4];
+            list.CopyTo(array, 1);
+
+            Assert.AreEqual(0, array[0]);
+            Assert.AreEqual(15, array[1]);
+            Assert.AreEqual(10, array[2]);
+            Assert.AreEqual(5, array[3]);
+        }
+
+        [TestMethod]
+        public void CopyTo_CopiesOutOfIndex()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddFirst(15);
+
+            int[] array = new int[2];
+            list.CopyTo(array, 0);
+
+            Assert.AreEqual(15, array[0]);
+            Assert.AreEqual(10, array[1]);
+        }
+
+
+        [TestMethod]
+        public unsafe void AddBefore_AddsNode()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddBefore(list.first, 15);
+
+            Assert.AreEqual(15, list.first->Value);
+            Assert.AreEqual(10, list.first->Next(null)->Value);
+            Assert.AreEqual(5, list.last->Value);
+        }
+
+        [TestMethod]
+        public unsafe void AddAfter_AddsNode()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddAfter(list.first, 15);
+
+            Assert.AreEqual(10, list.first->Value);
+            Assert.AreEqual(15, list.first->Next(null)->Value);
+            Assert.AreEqual(5, list.last->Value);
+        }
+
+        [TestMethod]
+        public unsafe void ICollection_Add_AddsNode()
+        {
+            XLinkedList list = new XLinkedList();
+
+            ((ICollection<int>)list).Add(5);
+
+            Assert.AreEqual(5, list.first->Value);
+            Assert.AreEqual(5, list.last->Value);
+        }
 
     }
 }

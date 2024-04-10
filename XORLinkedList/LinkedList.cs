@@ -73,7 +73,7 @@ namespace XORLinkedList
             return count;
         }
 
-        public bool IsReadOnly => throw new NotImplementedException();
+        public bool IsReadOnly => false;
 
         public unsafe LinkedList()
         {
@@ -82,39 +82,48 @@ namespace XORLinkedList
         }
 
 
-        public unsafe void AddAfter(Node<T>* prevNode, T data)
+        private unsafe Node<T>* GetNodeBefore(Node<T>* node)
         {
-            if (prevNode == null)
+            Node<T>* current = first;
+            Node<T>* prev = null;
+
+            while (current != null)
             {
-                return;
+                Node<T>* next = current->Next(prev);
+                if (current == node)
+                {
+                    return prev;
+                }
+
+                if (current == last)
+                {
+                    break;
+                }
+
+                prev = current;
+                current = next;
             }
 
+            return null;
+        }
+
+        public unsafe void AddAfter(Node<T>* prevNode, T data)
+        {
             Node<T>* newNode = (Node<T>*)Marshal.AllocHGlobal(sizeof(Node<T>));
             newNode->Value = data;
 
-            Node<T>* next = prevNode->Next(null);
-
-            prevNode->Link = XOR(newNode, XOR(prevNode->Link, next));
-
-            if (next != null)
-            {
-                next->Link = XOR(newNode, XOR(next->Link, prevNode));
-            }
-            else
-            {
-                last = newNode;
-            }
-
-            newNode->Link = XOR(prevNode, next);
+            AddAfter(prevNode, newNode);
         }
         public unsafe void AddAfter(Node<T>* prevNode, Node<T>* newNode)
         {
-            if (prevNode == null)
+            if (prevNode == null || newNode == null)
             {
                 return;
             }
 
-            Node<T>* next = prevNode->Next(null);
+            Node<T>* prevPrev = GetNodeBefore(prevNode);
+
+            Node<T>* next = prevNode->Next(prevPrev);
 
             prevNode->Link = XOR(newNode, XOR(prevNode->Link, next));
 
@@ -132,50 +141,28 @@ namespace XORLinkedList
 
         public unsafe void AddBefore(Node<T>* nextNode, T data)
         {
-            if (nextNode == null)
-            {
-                return;
-            }
-
             Node<T>* newNode = (Node<T>*)Marshal.AllocHGlobal(sizeof(Node<T>));
             newNode->Value = data;
 
-            Node<T>* prev = nextNode->Previous(null);
-
-            nextNode->Link = XOR(newNode, XOR(nextNode->Link, prev));
-
-            if (prev != null)
-            {
-                prev->Link = XOR(newNode, XOR(prev->Link, nextNode));
-            }
-            else
-            {
-                first = newNode;
-            }
-
-            newNode->Link = XOR(prev, nextNode);
+            AddBefore(nextNode, newNode);
         }
         public unsafe void AddBefore(Node<T>* nextNode, Node<T>* newNode)
         {
-            if (nextNode == null)
+            if (nextNode == null || newNode == null)
             {
                 return;
             }
 
-            Node<T>* prev = nextNode->Previous(null);
-
-            nextNode->Link = XOR(newNode, XOR(nextNode->Link, prev));
+            Node<T>* prev = GetNodeBefore(nextNode);
 
             if (prev != null)
             {
-                prev->Link = XOR(newNode, XOR(prev->Link, nextNode));
+                AddAfter(prev, newNode);
             }
             else
             {
-                first = newNode;
+                AddFirst(newNode);
             }
-
-            newNode->Link = XOR(prev, nextNode);
         }
 
 
@@ -234,7 +221,6 @@ namespace XORLinkedList
                 Node<T>* next = current->Next(prev);
                 Marshal.FreeHGlobal((IntPtr)current);
                 prev = current;
-                //current = null;
                 current = next;
             }
 
@@ -246,6 +232,7 @@ namespace XORLinkedList
         {
             Node<T>* current = first;
             Node<T>* prev = null;
+            Node<T>* next = null;
 
             while (current != null)
             {
@@ -259,7 +246,9 @@ namespace XORLinkedList
                     break;
                 }
 
-                current = current->Next(prev);
+                next = current->Next(prev);
+                prev = current;
+                current = next;
             }
 
             return false;
@@ -267,32 +256,81 @@ namespace XORLinkedList
 
         public unsafe void CopyTo(T[] array, int arrayIndex)
         {
-            for (Node<T>* current = first; current != null; current = current->Next(null))
+            Node<T>* current = first;
+            Node<T>* prev = null;
+            Node<T>* next = null;
+
+            int index = arrayIndex;
+
+            while (current != null)
             {
-                array[arrayIndex++] = current->Value;
+
+                array[index] = current->Value;
+
+                if (current == last)
+                {
+                    break;
+                }
+
+                index++;
+
+                if (index >= array.Length)
+                {
+                    break;
+                }
+
+                next = current->Next(prev);
+                prev = current;
+                current = next;
             }
         }
 
         public unsafe Node<T>* Find(T item)
         {
-            for (Node<T>* current = first; current != null; current = current->Next(null))
+            Node<T>* current = first;
+            Node<T>* prev = null;
+            Node<T>* next = null;
+
+            while (current != null)
             {
                 if (current->Value.Equals(item))
                 {
                     return current;
                 }
+
+                if (current == last)
+                {
+                    break;
+                }
+
+                next = current->Next(prev);
+                prev = current;
+                current = next;
             }
 
             return null;
         }
         public unsafe Node<T>* FindLast(T item)
         {
-            for (Node<T>* current = last; current != null; current = current->Previous(null))
+            Node<T>* current = last;
+            Node<T>* prev = null;
+            Node<T>* next = null;
+
+            while (current != null)
             {
                 if (current->Value.Equals(item))
                 {
                     return current;
                 }
+
+                if (current == first)
+                {
+                    break;
+                }
+
+                next = current->Previous(prev);
+                prev = current;
+                current = next;
             }
 
             return null;
@@ -318,43 +356,52 @@ namespace XORLinkedList
             throw new NotImplementedException();
         }
 
-        public unsafe void Remove(Node<T>* node)
+        public unsafe bool Remove(Node<T>* node)
         {
-            Node<T>* prev = node->Previous(null);
-            Node<T>* next = node->Next(null);
+            Node<T>* current = first;
+            Node<T>* prev = null;
 
-            if (prev != null)
+            while (current != null)
             {
-                prev->Link = XOR(prev->Link, node);
-            }
-            else
-            {
-                first = next;
-            }
-
-            if (next != null)
-            {
-                next->Link = XOR(next->Link, node);
-            }
-            else
-            {
-                last = prev;
-            }
-
-            Marshal.FreeHGlobal((IntPtr)node);
-        }
-        public unsafe bool Remove(T item)
-        {
-            for (Node<T>* current = first; current != null; current = current->Next(null))
-            {
-                if (current->Value.Equals(item))
+                Node<T>* next = current->Next(prev);
+                if (current == node)
                 {
-                    Remove(current);
+                    if (prev != null)
+                    {
+                        prev->Link = XOR(next, XOR(prev->Link, current));
+                    }
+                    else
+                    {
+                        first = next;
+                    }
+
+                    if (next != null)
+                    {
+                        next->Link = XOR(prev, XOR(next->Link, current));
+                    }
+                    else
+                    {
+                        last = prev;
+                    }
+
+                    Marshal.FreeHGlobal((IntPtr)current);
                     return true;
                 }
+
+                if (current == last)
+                {
+                    break;
+                }
+
+                prev = current;
+                current = next;
             }
 
             return false;
+        }
+        public unsafe bool Remove(T item)
+        {
+            return Remove(Find(item));
         }
         
         public unsafe void RemoveFirst()
