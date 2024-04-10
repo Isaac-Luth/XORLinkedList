@@ -421,5 +421,61 @@ namespace XORLinkedListTests
             Assert.AreEqual(5, list.last->Value);
         }
 
+
+        [TestMethod]
+        public unsafe void Find_ReturnsNode()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddFirst(15);
+
+            Node* node = list.Find(10);
+
+            Assert.AreEqual(10, node->Value);
+        }
+
+        [TestMethod]
+        public unsafe void Find_ReturnsNull()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddFirst(15);
+
+            Node* node = list.Find(20);
+
+            Assert.AreEqual(IntPtr.Zero, (IntPtr)node);
+        }
+
+        [TestMethod]
+        public unsafe void FindLast_ReturnsNode()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddFirst(15);
+
+            Node* node = list.FindLast(10);
+
+            Assert.AreEqual(10, node->Value);
+        }
+
+        [TestMethod]
+        public unsafe void FindLast_ReturnsNull()
+        {
+            XLinkedList list = new XLinkedList();
+
+            list.AddFirst(5);
+            list.AddFirst(10);
+            list.AddFirst(15);
+
+            Node* node = list.FindLast(20);
+
+            Assert.AreEqual(IntPtr.Zero, (IntPtr)node);
+        }
     }
 }
