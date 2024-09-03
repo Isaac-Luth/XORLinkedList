@@ -1,42 +1,30 @@
 ﻿using System.Collections;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 
 namespace XORLinkedList
 {
+
+    [DebuggerDisplay("Count = {Count}")]
+    [Serializable]
     public class LinkedList<T> : ICollection<T>, IEnumerable<T>, ISerializable, IDeserializationCallback
     {
-        public unsafe struct Node<T>
-        {
-            public T Value;
+        // This LinkedList is a doubly-Linked circular list.
+        internal LinkedListNode<T>? head;
+        internal int count;
+        internal int version;
+        private SerializationInfo? _siInfo; //A temporary variable which we need during deserialization.
 
-            internal Node<T>* Link;
-
-            public unsafe Node<T>* Next(Node<T>* prev)
-            {
-                return XOR(Link, prev);
-            }
-            public unsafe Node<T>* Previous(Node<T>* next)
-            {
-                return XOR(Link, next);
-            }
-
-            public Node(T value)
-            {
-                Value = value;
-                Link = null;
-            }
-
-            private unsafe Node<T>* XOR(Node<T>* x, Node<T>* y)
-            {
-                return (Node<T>*)((UIntPtr)(x) ^ (UIntPtr)(y));
-            }
-        }
-
-
-
+        // names for serialization
+        private const string VersionName = "Version"; // Do not rename (binary serialization)
+        private const string CountName = "Count"; // Do not rename (binary serialization)
+        private const string ValuesName = "Data"; // Do not rename (binary serialization)
         public unsafe Node<T>* first { get; private set; }
-
+        public unsafe Node<T>* last { get; private set; }
+        
+        
         private unsafe Node<T> _first
         {
             get
@@ -47,31 +35,9 @@ namespace XORLinkedList
             }
             set { *first = value; }
         }
-        public unsafe Node<T>* last { get; private set; }
 
-        public int Count => _Count();
+        public int Count => count;
 
-        private unsafe int _Count()
-        {
-            Node<T>* current = first;
-            Node<T>* prev = null;
-
-            int count = 0;
-
-            while (current != null)
-            {
-                count++;
-
-                if (current == last)
-                {
-                    break;
-                }
-                
-                current = current->Next(prev);
-            }
-
-            return count;
-        }
 
         public bool IsReadOnly => false;
 
@@ -137,6 +103,8 @@ namespace XORLinkedList
             }
 
             newNode->Link = XOR(prevNode, next);
+
+            count++;
         }
 
         public unsafe void AddBefore(Node<T>* nextNode, T data)
@@ -163,6 +131,8 @@ namespace XORLinkedList
             {
                 AddFirst(newNode);
             }
+
+            count++;
         }
 
 
@@ -187,6 +157,8 @@ namespace XORLinkedList
             }
 
             first = newNode;
+
+            count++;
         }
 
         public unsafe void AddLast(T data)
@@ -210,6 +182,8 @@ namespace XORLinkedList
             }
 
             last = newNode;
+
+            count++;
         }
 
         public unsafe void Clear()
@@ -226,6 +200,7 @@ namespace XORLinkedList
 
             first = null;
             last = null;
+            count = 0;
         }
 
         public unsafe bool Contains(T item)
@@ -349,11 +324,54 @@ namespace XORLinkedList
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(info);
+
+            // Customized serialization for LinkedList.
+            // We need to do this because it will be too expensive to Serialize each node.
+            // This will give us the flexiblility to change internal implementation freely in future.
+
+            info.AddValue(VersionName, version);
+            info.AddValue(CountName, count); // this is the length of the bucket array.
+
+            if (count != 0)
+            {
+                T[] array = new T[count];
+                CopyTo(array, 0);
+                info.AddValue(ValuesName, array, typeof(T[]));
+            }
         }
         public void OnDeserialization(object? sender)
         {
-            throw new NotImplementedException();
+            if (_siInfo == null)
+            {
+                return; //Somebody had a dependency on this LinkedList and fixed us up before the ObjectManager got to it.
+            }
+             
+            int realVersion = _siInfo.GetInt32(VersionName);
+            int count = _siInfo.GetInt32(CountName);
+            
+            if (count != 0)
+            {
+                T[]? array = (T[]?)_siInfo.GetValue(ValuesName, typeof(T[]));
+                
+                if (array == null)
+                {
+                    throw new SerializationException();
+                }
+                for (int i = 0; i < array.Length; i++)
+                {
+                    AddLast(array[i]);
+                }
+
+            }
+            
+            else
+            {
+                head = null;
+            }
+
+            version = realVersion;
+            _siInfo = null;
         }
 
         public unsafe bool Remove(Node<T>* node)
@@ -385,6 +403,7 @@ namespace XORLinkedList
                     }
 
                     Marshal.FreeHGlobal((IntPtr)current);
+                    count--;
                     return true;
                 }
 
@@ -413,6 +432,7 @@ namespace XORLinkedList
 
             Node<T>* next = XOR(first->Link, null);
             Marshal.FreeHGlobal((IntPtr)first);
+            count--;
             first = next;
 
 
@@ -434,6 +454,7 @@ namespace XORLinkedList
 
             Node<T>* prev = XOR(last->Link, null);
             Marshal.FreeHGlobal((IntPtr)last);
+            count--;
             last = prev;
 
             if (last != null)
@@ -458,11 +479,43 @@ namespace XORLinkedList
         {
             AddFirst(item);
         }
+
+
+        public unsafe struct Node<T>
+        {
+            public T Value;
+
+            internal Node<T>* Link;
+
+            public unsafe Node<T>* Next(Node<T>* prev)
+            {
+                return XOR(Link, prev);
+            }
+            public unsafe Node<T>* Previous(Node<T>* next)
+            {
+                return XOR(Link, next);
+            }
+
+            public Node(T value)
+            {
+                Value = value;
+                Link = null;
+            }
+
+            public Node()
+            {
+            }
+
+            private unsafe Node<T>* XOR(Node<T>* x, Node<T>* y)
+            {
+                return (Node<T>*)((UIntPtr)(x) ^ (UIntPtr)(y));
+            }
+        }
     }
 
-    internal unsafe class LinkedListEnumerator<T> : IEnumerator<T>
+    internal unsafe struct LinkedListEnumerator<T> : IEnumerator<T>
     {
-        private LinkedList<T>.Node<T> _first;
+        private readonly LinkedList<T>.Node<T> _first;
 
         private LinkedList<T>.Node<T>* _current;
         private LinkedList<T>.Node<T>* _previous;
@@ -514,4 +567,6 @@ namespace XORLinkedList
             // Dispose resources if needed
         }
     }
+
+
 }
